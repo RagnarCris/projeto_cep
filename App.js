@@ -4,18 +4,31 @@ import Header from './components/header';
 import SearchCEP from './components/searchCEP';
 
 export default function App() {
+  const [isLoading, setLoading] = useState(false);
   const [cep, setCep] = useState({ rua: '', cidade: '', uf: '' });
 
   const submitHandler = (text) => {
-    const json_cidade = 'Juiz de Fora Bolsonaro';
-    const json_rua = 'Resistência';
-    const json_uf = 'MG';
     if(text.length == 8){
-      setCep({
-        rua: json_rua,
-        cidade: json_cidade,
-        uf: json_uf
-      });
+      setLoading(true);
+      // Forço a esperar meio segundo apenas para aparecer "Pesquisando..."
+      setTimeout(() => {
+        fetch(`https://viacep.com.br/ws/${text}/json/`)
+          .then(res => {
+            if (!res.ok) { // erro vindo do servidor
+              throw Error('Pesquisa retornou erro, o CEP está correto?');
+            } 
+            return res.json();
+          })
+          .then(data => {
+            setCep({
+              rua: data.logradouro,
+              cidade: data.localidade,
+              uf: data.uf
+            });
+          })
+          .catch((error) => console.error(error))
+          .finally(() => setLoading(false));
+        }, 500);
     } else {
       Alert.alert('OOPS', 'CEP deve ter 8 dígitos, sem hífen!', [
         {text: 'Ok', onPress: () => console.log('alert encerrado') }
@@ -34,13 +47,13 @@ export default function App() {
           <SearchCEP submitHandler={submitHandler} />
           <View style={styles.result}>
             <Text style={styles.text}>
-              Rua: {cep.rua}
+              Logradouro: {isLoading ? "Pesquisando..." : cep.rua}
             </Text>
             <Text style={styles.text}>
-              Cidade: {cep.cidade}
+              Cidade: {isLoading ? "Pesquisando..." : cep.cidade}
             </Text>
             <Text style={styles.text}>  
-              UF: {cep.uf}
+              UF: {isLoading ? "Pesquisando..." : cep.uf}
             </Text>
           </View>
         </View>
@@ -69,7 +82,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-around'
   },
   text: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "bold"
   }
 });
